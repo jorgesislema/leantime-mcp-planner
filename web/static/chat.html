@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Leantime Copilot — Chat IA</title>
+  <style>
+    body{font-family:Inter,Arial,Helvetica,sans-serif;display:flex;flex-direction:column;height:100vh;margin:0}
+    main{flex:1;display:flex;flex-direction:column;padding:1rem}
+    #messages{flex:1;overflow:auto;border:1px solid #ddd;padding:0.5rem;border-radius:6px;background:#fff}
+    .msg{margin:0.5rem 0;padding:0.5rem;border-radius:6px}
+    .user{background:#e6f7ff;text-align:right}
+    .bot{background:#f6f6f8}
+    footer{display:flex;gap:0.5rem;padding:0.5rem;border-top:1px solid #eee}
+    input[type=text]{flex:1;padding:0.6rem;border:1px solid #ccc;border-radius:6px}
+    button{padding:0.6rem 1rem;border-radius:6px;border:0;background:#0078d4;color:#fff}
+  </style>
+</head>
+<body>
+  <main>
+    <h2>Leantime Copilot — Chat IA</h2>
+    <p style="margin-top:0;color:#555">Este chat usa el bridge local y puede trabajar con Leantime. Si quieres crear tareas, usa los botones inferiores.</p>
+    <div id="messages" aria-live="polite"></div>
+    <footer>
+      <input id="input" type="text" placeholder="Escribe tu mensaje..." />
+      <button id="send">Enviar</button>
+    </footer>
+
+    <section style="border-top:1px solid #eee;padding:0.5rem">
+      <label style="display:flex;gap:0.5rem;align-items:center">
+        <input id="createTaskChk" type="checkbox" /> Crear tarea en Leantime con la respuesta
+      </label>
+      <div style="margin-top:0.5rem;display:flex;gap:0.5rem;align-items:center">
+        <input id="projectId" type="text" placeholder="Project ID (opcional)" style="width:160px;padding:0.4rem;border:1px solid #ccc;border-radius:6px" />
+        <button id="createTaskBtn" disabled style="background:#28a745">Crear tarea</button>
+        <button id="planCreateBtn" style="background:#6f42c1">IA planifica y crea</button>
+        <span id="taskStatus" style="margin-left:8px;color:#333"></span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const messagesEl = document.getElementById('messages');
+    const input = document.getElementById('input');
+    const send = document.getElementById('send');
+    const chatSystemPrompt = 'Eres Leantime Copilot dentro de esta web. Habla siempre en espanol, responde como un asistente conectado al bridge local de Leantime y no digas que no puedes conectarte a Leantime si el sistema ya esta integrado. Si el usuario quiere crear tareas, indicale que puede usar los botones Crear tarea o IA planifica y crea.';
+
+    function addMsg(text, who){
+      const d = document.createElement('div');
+      d.className = 'msg ' + (who==='user'?'user':'bot');
+      d.textContent = text;
+      messagesEl.appendChild(d);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    async function sendMessage(){
+      const text = input.value.trim();
+      if(!text) return;
+      addMsg(text,'user');
+      input.value='';
+      addMsg('...','bot');
+      try{
+        const res = await fetch('/ai/chat', {
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({message:text, system_prompt: chatSystemPrompt, max_tokens:256, temperature:0.2})
+        });
+        const json = await res.json();
+        // remove last '...' bot
+        const last = messagesEl.querySelectorAll('.bot');
+        if(last.length) last[last.length-1].textContent = json.response || JSON.stringify(json);
+        // enable create task button when a response exists and checkbox is checked
+        const createChk = document.getElementById('createTaskChk');
+        const createBtn = document.getElementById('createTaskBtn');
+        if(json.response && createChk && createBtn){
+          createBtn.dataset.lastResponse = json.response;
+          createBtn.disabled = !createChk.checked;
+        }
+      }catch(e){
+        const last = messagesEl.querySelectorAll('.bot');
+        if(last.length) last[last.length-1].textContent = 'Error: ' + e.message;
+      }
+    }
+
+    send.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e)=>{ if(e.key==='Enter') sendMessage(); });
+
+  // Crear tarea en Leantime usando /tasks
+  const createBtn = document.getElementById('createTaskBtn');
+  const planCreateBtn = document.getElementById('planCreateBtn');
+  const taskStatus = document.getElementById('taskStatus');
+  const projectInput = document.getElementById('projectId');
+  const createChk = document.getElementById('createTaskChk');
+
+  // Toggle button enabled state when checkbox changes
+  createChk?.addEventListener('change', ()=>{
+    if(!createBtn) return;
+    createBtn.disabled = !createChk.checked || !createBtn.dataset.lastResponse;
+  });
+
+  createBtn?.addEventListener('click', async ()=>{
+    const title = createBtn.dataset.lastResponse || '';
+    if(!title) return;
+    const projectId = projectInput?.value || undefined;
+    createBtn.disabled = true;
+    taskStatus.textContent = 'Creando...';
+    try{
+      const payload = { title: title, description: '' };
+      if(projectId){
+        const pid = parseInt(projectId);
+        if(!Number.isNaN(pid)) payload.project_id = pid;
+      }
+      const res = await fetch('/tasks', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await res.json().catch(()=>null);
+      if(res.ok){
+        const created = (j && (j.created ?? j)) || null;
+        const id = created && (created.id ?? created.ticketId ?? created.taskId) || null;
+        taskStatus.textContent = id ? ('Tarea creada: ' + id) : 'Tarea creada';
+      }else{
+        taskStatus.textContent = 'Error creando: ' + (j?.detail ?? JSON.stringify(j));
+      }
+    }catch(err){
+      taskStatus.textContent = 'Error: ' + err.message;
+    }finally{
+      setTimeout(()=>{ createBtn.disabled = false; }, 1500);
+    }
+  });
+
+  planCreateBtn?.addEventListener('click', async ()=>{
+    const brief = input.value.trim() || createBtn?.dataset.lastResponse || '';
+    if(!brief){
+      taskStatus.textContent = 'Escribe la idea o alcance primero';
+      return;
+    }
+
+    const projectId = projectInput?.value || undefined;
+    planCreateBtn.disabled = true;
+    taskStatus.textContent = 'La IA está analizando y creando tareas...';
+
+    try{
+      const payload = { brief, max_tasks: 10 };
+      if(projectId){
+        const pid = parseInt(projectId);
+        if(!Number.isNaN(pid)) payload.project_id = pid;
+      }
+
+      const res = await fetch('/ai/plan-and-create', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+      const j = await res.json().catch(()=>null);
+      if(!res.ok){
+        taskStatus.textContent = 'Error IA/Leantime: ' + (j?.detail ?? JSON.stringify(j));
+        return;
+      }
+
+      const summary = j?.summary || 'Plan creado';
+      const createdCount = j?.created_count ?? 0;
+      addMsg(summary, 'bot');
+      if(Array.isArray(j?.created)){
+        j.created.forEach(task => {
+          addMsg('Tarea creada: ' + (task.headline || task.title || ('ID ' + task.id)), 'bot');
+        });
+      }
+      taskStatus.textContent = 'IA creó ' + createdCount + ' tareas en Leantime';
+    }catch(err){
+      taskStatus.textContent = 'Error: ' + err.message;
+    }finally{
+      planCreateBtn.disabled = false;
+    }
+  });
+  </script>
+</body>
+</html>
