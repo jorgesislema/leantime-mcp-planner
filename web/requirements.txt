@@ -1,0 +1,6 @@
+fastapi>=0.95
+uvicorn[standard]>=0.22
+httpx>=0.24
+openai>=1.0
+apscheduler>=3.10
+croniter>=1.4
