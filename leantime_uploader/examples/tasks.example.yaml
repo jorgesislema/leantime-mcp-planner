@@ -1,0 +1,208 @@
+# Ejemplo de archivo tasks.yaml generado por el agente planificador de proyectos.
+#
+# Este archivo es generado automaticamente. No lo edites manualmente a menos que
+# quieras ajustar estimaciones o prioridades antes de subir a Leantime.
+#
+# Campos:
+#   title        : identificador legible, formato "FASE - ENTREGABLE - TAREA"
+#   description  : criterios de aceptacion y detalle tecnico
+#   project_id   : id numerico del proyecto en Leantime
+#   priority     : critica | alta | media | baja
+#   estimated_hours: horas estimadas de trabajo
+#   assignee     : nombre o rol del responsable
+#   depends_on   : titulo de la tarea previa requerida (o null)
+#   status       : pendiente | en_progreso | completada
+#   leantime_id  : rellenado automaticamente por push_to_leantime.py
+
+project:
+  name: "API de gestion de pedidos"
+  leantime_project_id: 1
+
+tasks:
+  # -------------------------------------------------------------------------
+  # FASE: Analisis de requisitos
+  # -------------------------------------------------------------------------
+  - title: "Analisis - Requisitos - Levantar requisitos funcionales con stakeholders"
+    description: |
+      Reunirse con los stakeholders para documentar los casos de uso principales:
+      crear pedido, consultar estado, cancelar pedido, listar pedidos por cliente.
+      Criterio de aceptacion: documento de requisitos aprobado por el product owner.
+    project_id: 1
+    priority: "critica"
+    estimated_hours: 4
+    assignee: "Jorge"
+    depends_on: null
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Analisis - Requisitos - Definir contratos de API (endpoints y payloads)"
+    description: |
+      Crear especificacion OpenAPI 3.0 con todos los endpoints: POST /orders,
+      GET /orders/{id}, DELETE /orders/{id}, GET /orders?customer_id=X.
+      Criterio de aceptacion: archivo openapi.yaml revisado y aprobado.
+    project_id: 1
+    priority: "critica"
+    estimated_hours: 3
+    assignee: "Jorge"
+    depends_on: "Analisis - Requisitos - Levantar requisitos funcionales con stakeholders"
+    status: "pendiente"
+    leantime_id: null
+
+  # -------------------------------------------------------------------------
+  # FASE: Disenio de arquitectura y base de datos
+  # -------------------------------------------------------------------------
+  - title: "Disenio - Arquitectura - Definir capas de la aplicacion"
+    description: |
+      Documentar la arquitectura en capas: presentacion (FastAPI), logica de negocio,
+      repositorio, base de datos (PostgreSQL). Incluir diagrama de componentes.
+      Criterio de aceptacion: diagrama aprobado por el equipo tecnico.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 3
+    assignee: "Jorge"
+    depends_on: "Analisis - Requisitos - Definir contratos de API (endpoints y payloads)"
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Disenio - Base de datos - Modelar schema de tablas orders y order_items"
+    description: |
+      Crear migracion Alembic con las tablas: orders (id, customer_id, status,
+      created_at, updated_at) y order_items (id, order_id, product_id, quantity, price).
+      Criterio de aceptacion: migracion ejecutada en entorno de desarrollo sin errores.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 4
+    assignee: "Jorge"
+    depends_on: "Disenio - Arquitectura - Definir capas de la aplicacion"
+    status: "pendiente"
+    leantime_id: null
+
+  # -------------------------------------------------------------------------
+  # FASE: Configuracion de entorno y CI/CD
+  # -------------------------------------------------------------------------
+  - title: "Entorno - CI/CD - Configurar pipeline de GitHub Actions para tests"
+    description: |
+      Crear workflow .github/workflows/ci.yml que ejecute pytest en cada pull request
+      contra la rama main. Debe incluir instalacion de dependencias, variables de entorno
+      de prueba y reporte de cobertura.
+      Criterio de aceptacion: el pipeline pasa en verde con tests de ejemplo.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 2
+    assignee: "Jorge"
+    depends_on: null
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Entorno - Docker - Crear docker-compose para desarrollo local"
+    description: |
+      Crear docker-compose.yml con servicios: api (FastAPI), db (PostgreSQL 15),
+      y opcionalmente adminer para inspeccion de BD. Incluir volumen para datos de BD.
+      Criterio de aceptacion: docker compose up arranca todo sin errores.
+    project_id: 1
+    priority: "media"
+    estimated_hours: 2
+    assignee: "Jorge"
+    depends_on: null
+    status: "pendiente"
+    leantime_id: null
+
+  # -------------------------------------------------------------------------
+  # FASE: Desarrollo de funcionalidades principales
+  # -------------------------------------------------------------------------
+  - title: "Desarrollo - Pedidos - Implementar endpoint POST /orders"
+    description: |
+      Crear endpoint que valide el payload, calcule el total, persista el pedido
+      y devuelva 201 con el objeto creado. Incluir validacion con Pydantic.
+      Criterio de aceptacion: test de integracion pasa para casos validos e invalidos.
+    project_id: 1
+    priority: "critica"
+    estimated_hours: 6
+    assignee: "Jorge"
+    depends_on: "Disenio - Base de datos - Modelar schema de tablas orders y order_items"
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Desarrollo - Pedidos - Implementar endpoint GET /orders/{id}"
+    description: |
+      Endpoint de consulta con manejo de 404 cuando el id no existe.
+      Devolver el pedido con sus items anidados.
+      Criterio de aceptacion: test cubre pedido existente, inexistente y no autorizado.
+    project_id: 1
+    priority: "critica"
+    estimated_hours: 3
+    assignee: "Jorge"
+    depends_on: "Desarrollo - Pedidos - Implementar endpoint POST /orders"
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Desarrollo - Pedidos - Implementar endpoint DELETE /orders/{id}"
+    description: |
+      Solo se puede cancelar un pedido en estado 'pendiente'. Cambiar status a 'cancelado'.
+      Devolver 409 si el pedido ya esta en estado 'enviado' o 'entregado'.
+      Criterio de aceptacion: tests cubren los tres estados posibles.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 3
+    assignee: "Jorge"
+    depends_on: "Desarrollo - Pedidos - Implementar endpoint GET /orders/{id}"
+    status: "pendiente"
+    leantime_id: null
+
+  # -------------------------------------------------------------------------
+  # FASE: Pruebas
+  # -------------------------------------------------------------------------
+  - title: "Pruebas - Unitarias - Cubrir logica de negocio (calculo de totales y estados)"
+    description: |
+      Escribir tests unitarios para las funciones de calculo de total de pedido
+      y validacion de cambios de estado (maquina de estados del pedido).
+      Criterio de aceptacion: cobertura >= 80% en los modulos de logica de negocio.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 4
+    assignee: "Jorge"
+    depends_on: "Desarrollo - Pedidos - Implementar endpoint POST /orders"
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Pruebas - Integracion - Tests E2E del flujo completo de pedido"
+    description: |
+      Test que crea un pedido, lo consulta, y lo cancela usando el cliente HTTP real
+      contra la BD de test. Usar pytest-asyncio y httpx AsyncClient.
+      Criterio de aceptacion: flujo completo pasa sin errores en el pipeline de CI.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 5
+    assignee: "Jorge"
+    depends_on: "Pruebas - Unitarias - Cubrir logica de negocio (calculo de totales y estados)"
+    status: "pendiente"
+    leantime_id: null
+
+  # -------------------------------------------------------------------------
+  # FASE: Despliegue en produccion
+  # -------------------------------------------------------------------------
+  - title: "Despliegue - Produccion - Configurar variables de entorno en servidor"
+    description: |
+      Definir en el servidor de produccion: DATABASE_URL, SECRET_KEY, ALLOWED_HOSTS,
+      LOG_LEVEL. Documentar en el README de operaciones.
+      Criterio de aceptacion: la aplicacion arranca en produccion y responde /health.
+    project_id: 1
+    priority: "alta"
+    estimated_hours: 2
+    assignee: "Jorge"
+    depends_on: "Pruebas - Integracion - Tests E2E del flujo completo de pedido"
+    status: "pendiente"
+    leantime_id: null
+
+  - title: "Despliegue - Produccion - Ejecutar migraciones de BD en produccion"
+    description: |
+      Ejecutar alembic upgrade head en produccion antes del primer deploy.
+      Verificar que las tablas existen con los datos de prueba iniciales.
+      Criterio de aceptacion: consulta en BD confirma estructura correcta.
+    project_id: 1
+    priority: "critica"
+    estimated_hours: 1
+    assignee: "Jorge"
+    depends_on: "Despliegue - Produccion - Configurar variables de entorno en servidor"
+    status: "pendiente"
+    leantime_id: null
